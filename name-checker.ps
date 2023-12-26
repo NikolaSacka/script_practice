@@ -1,0 +1,49 @@
+# Install the required module
+Install-Module ImportExcel -Scope CurrentUser -Force
+
+# Path to the Excel file
+$excelFilePath = "C:\Path\to\your\Excel\File.xlsx"
+
+# Load the Excel file
+$excelData = Import-Excel -Path $excelFilePath
+
+# Array to store incorrect names
+$incorrectNames = @()
+
+# Iterate through the rows
+foreach ($row in $excelData) {
+    $name = $row.Name
+
+    # Replace this condition with your naming nomenclature check
+    if ($name -notmatch "^[A-Z][a-z]+$") {
+        $incorrectNames += $name
+    } else {
+        $row | Export-Excel -Path $excelFilePath -WorksheetName "Sheet1" -Append
+    }
+}
+
+# Export incorrect names to a separate TXT file
+$incorrectNames | Out-File -FilePath "C:\Path\to\output\IncorrectNames.txt"
+
+# Open Excel application
+$excel = New-Object -ComObject Excel.Application
+$workbook = $excel.Workbooks.Open($excelFilePath)
+$worksheet = $workbook.Worksheets.Item("Sheet1")
+
+# Set up a bright green color
+$greenColor = 0x00FF00
+$worksheet.Cells.Interior.Color = $greenColor
+
+# Save changes and close Excel
+$workbook.Save()
+$workbook.Close($true)
+$excel.Quit()
+
+# Release COM objects
+[System.Runtime.Interopservices.Marshal]::ReleaseComObject($worksheet) | Out-Null
+[System.Runtime.Interopservices.Marshal]::ReleaseComObject($workbook) | Out-Null
+[System.Runtime.Interopservices.Marshal]::ReleaseComObject($excel) | Out-Null
+
+# Remove the incorrect names from the Excel file
+$excelData | Where-Object { $incorrectNames -notcontains $_.Name } |
+    Export-Excel -Path $excelFilePath -WorksheetName "Sheet1" -Force

@@ -1,0 +1,7 @@
+# Get a list of currently logged-in users
+$loggedInUsers = Get-WmiObject -Class Win32_ComputerSystem | Select-Object -ExpandProperty UserName
+
+# Display the list of logged-in users
+foreach ($user in $loggedInUsers) {
+    Write-Host "Logged-in User: $user"
+}

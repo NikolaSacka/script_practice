@@ -1,0 +1,15 @@
+$targetIP = "10.1.49.67"
+
+$result = Test-Connection -ComputerName $targetIP -Count 4 -ErrorAction SilentlyContinue
+
+if ($result) {
+    foreach ($reply in $result) {
+        if ($reply.Status -eq "Success") {
+            Write-Host "Reply from $($reply.Address): Time $($reply.ResponseTime)ms"
+        } else {
+            Write-Host "Request timed out to $($reply.Address)"
+        }
+    }
+} else {
+    Write-Host "Failed to ping $targetIP"
+}
