@@ -1,0 +1,52 @@
+# Set the iDRAC IP address, username, and password
+$idracIP = "iDRAC_IP"
+$username = "username"
+$password = "password"
+
+# Base URL for Redfish API
+$baseUrl = "https://$idracIP/redfish/v1"
+
+# Function to authenticate and get a session token
+function Get-SessionToken {
+    $authHeader = "Basic " + [Convert]::ToBase64String([Text.Encoding]::ASCII.GetBytes("$username:$password"))
+    $response = Invoke-RestMethod -Uri "$baseUrl/Sessions" -Method Post -Headers @{ Authorization = $authHeader }
+
+    return $response.SessionKey
+}
+
+# Function to set iDRAC settings
+function Set-iDRACSettings {
+    param (
+        [string]$sessionToken
+    )
+
+    $headers = @{
+        "X-Auth-Token" = $sessionToken
+        "Content-Type" = "application/json"
+    }
+
+    $settingsJson = @"
+    {
+        "Attributes": {
+            "iDRAC.IPv4.Enable": "Enabled",
+            "iDRAC.IPv4.Address": "192.168.1.100",
+            "iDRAC.IPv4.Netmask": "255.255.255.0",
+            "iDRAC.IPv4.Gateway": "192.168.1.1"
+        }
+    }
+"@
+
+    Invoke-RestMethod -Uri "$baseUrl/Managers/iDRAC.Embedded.1" -Method Patch -Headers $headers -Body $settingsJson
+}
+
+# Main script
+try {
+    $sessionToken = Get-SessionToken
+    Write-Host "Session Token Obtained: $sessionToken"
+
+    Set-iDRACSettings -sessionToken $sessionToken
+
+    Write-Host "iDRAC settings configured successfully."
+} catch {
+    Write-Host "An error occurred: $_"
+}

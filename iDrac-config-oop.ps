@@ -1,0 +1,58 @@
+class DellServer {
+    [string]$idracIP
+    [string]$username
+    [string]$password
+    [string]$sessionToken
+
+    DellServer([string]$idracIP, [string]$username, [string]$password) {
+        $this.idracIP = $idracIP
+        $this.username = $username
+        $this.password = $password
+    }
+
+    [string] Authenticate() {
+        $authHeader = "Basic " + [Convert]::ToBase64String([Text.Encoding]::ASCII.GetBytes("$($this.username):$($this.password)"))
+        $response = Invoke-RestMethod -Uri "$($this.GetBaseUrl())/Sessions" -Method Post -Headers @{ Authorization = $authHeader }
+        $this.sessionToken = $response.SessionKey
+        return $this.sessionToken
+    }
+
+    [string] GetBaseUrl() {
+        return "https://$($this.idracIP)/redfish/v1"
+    }
+
+    [void] ConfigureIDRACSettings() {
+        $sessionToken = $this.Authenticate()
+        $headers = @{
+            "X-Auth-Token" = $sessionToken
+            "Content-Type" = "application/json"
+        }
+
+        $settingsJson = @"
+        {
+            "Attributes": {
+                "iDRAC.IPv4.Enable": "Enabled",
+                "iDRAC.IPv4.Address": "192.168.1.100",
+                "iDRAC.IPv4.Netmask": "255.255.255.0",
+                "iDRAC.IPv4.Gateway": "192.168.1.1"
+            }
+        }
+"@
+
+        Invoke-RestMethod -Uri "$($this.GetBaseUrl())/Managers/iDRAC.Embedded.1" -Method Patch -Headers $headers -Body $settingsJson
+    }
+}
+
+# Main script
+try {
+    $idracIP = "iDRAC_IP"
+    $username = "username"
+    $password = "password"
+
+    $dellServer = [DellServer]::new($idracIP, $username, $password)
+    $dellServer.ConfigureIDRACSettings()
+
+    Write-Host "iDRAC settings configured successfully."
+} catch {
+    Write-Host "An error occurred: $_"
+}
